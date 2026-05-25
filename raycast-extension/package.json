@@ -1,0 +1,59 @@
+{
+  "name": "extra-brightness",
+  "title": "Extra Brightness",
+  "description": "Experimental personal XDR extra brightness control for Raycast. Not affiliated with Raycast, Lunar, DisplayBuddy, BrightXDR, or Apple.",
+  "author": "sergeygarin",
+  "platforms": [
+    "macOS"
+  ],
+  "categories": [
+    "System"
+  ],
+  "license": "UNLICENSED",
+  "commands": [
+    {
+      "name": "toggle",
+      "title": "Toggle Extra Brightness",
+      "description": "Toggle built-in XDR extra brightness using the configured level.",
+      "mode": "no-view"
+    },
+    {
+      "name": "turn-on",
+      "title": "Turn On Extra Brightness",
+      "description": "Turn on built-in XDR extra brightness.",
+      "mode": "no-view"
+    },
+    {
+      "name": "turn-off",
+      "title": "Turn Off Extra Brightness",
+      "description": "Turn off built-in XDR extra brightness.",
+      "mode": "no-view"
+    },
+    {
+      "name": "reset",
+      "title": "Reset Extra Brightness",
+      "description": "Restore normal brightness mode.",
+      "mode": "no-view"
+    },
+    {
+      "name": "status",
+      "title": "Extra Brightness Status",
+      "description": "Show current extra brightness status.",
+      "mode": "no-view"
+    }
+  ],
+  "preferences": [],
+  "scripts": {
+    "build:cli": "../script/build_raycast_extension.sh",
+    "dev": "npm run build:cli && ray dev",
+    "build": "npm run build:cli && ray build",
+    "lint": "ray lint"
+  },
+  "dependencies": {
+    "@raycast/api": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "typescript": "latest"
+  }
+}

@@ -1,0 +1,13 @@
+.build/
+.swiftpm/
+DerivedData/
+Package.resolved
+
+node_modules/
+raycast-extension/.raycast/
+raycast-extension/dist/
+raycast-extension/bin/
+raycast-extension/assets/bin/
+raycast-extension/package-lock.json
+
+.DS_Store
