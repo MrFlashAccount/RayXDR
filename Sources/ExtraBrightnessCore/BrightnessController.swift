@@ -1,28 +1,27 @@
 import Foundation
 import CoreGraphics
 import Darwin
-import ExtraBrightnessCore
 
-enum BrightnessMode: String, Codable {
+public enum BrightnessMode: String, Codable {
     case unsupported
     case direct
     case overlay
     case edrGammaOverlay
 }
 
-struct BrightnessStatus: Codable {
-    var implementationMode: BrightnessMode
-    var enabled: Bool
-    var requestedLevel: Int?
-    var unsupportedReason: String?
-    var updatedAt: Date?
+public struct BrightnessStatus: Codable {
+    public var implementationMode: BrightnessMode
+    public var enabled: Bool
+    public var requestedLevel: Int?
+    public var unsupportedReason: String?
+    public var updatedAt: Date?
 }
 
-enum BrightnessError: Error, CustomStringConvertible {
+public enum BrightnessError: Error, CustomStringConvertible {
     case unsupported(String)
     case invalidLevel(String)
 
-    var description: String {
+    public var description: String {
         switch self {
         case .unsupported(let reason):
             return "Unsupported: \(reason)"
@@ -32,7 +31,7 @@ enum BrightnessError: Error, CustomStringConvertible {
     }
 }
 
-protocol BrightnessControlling {
+public protocol BrightnessControlling {
     func status() throws -> BrightnessStatus
     func set(levelOrPreset: String) throws -> String
     func toggle() throws -> String
@@ -42,10 +41,12 @@ protocol BrightnessControlling {
     func probe(json: Bool) throws -> String
 }
 
-struct ProcessBrightnessController: BrightnessControlling {
+public struct ProcessBrightnessController: BrightnessControlling {
     private let store = StateStore()
 
-    func status() throws -> BrightnessStatus {
+    public init() {}
+
+    public func status() throws -> BrightnessStatus {
         guard let state = try store.load(), let pid = state.helperPID, isProcessRunning(pid) else {
             return BrightnessStatus(
                 implementationMode: .edrGammaOverlay,
@@ -65,7 +66,7 @@ struct ProcessBrightnessController: BrightnessControlling {
         )
     }
 
-    func set(levelOrPreset: String) throws -> String {
+    public func set(levelOrPreset: String) throws -> String {
         let level = try LevelParser.parse(levelOrPreset)
         if level <= 100 {
             return try off()
@@ -73,7 +74,7 @@ struct ProcessBrightnessController: BrightnessControlling {
         return try on(level: level)
     }
 
-    func toggle() throws -> String {
+    public func toggle() throws -> String {
         let current = try status()
         if current.enabled {
             return try off()
@@ -81,7 +82,7 @@ struct ProcessBrightnessController: BrightnessControlling {
         return try on(level: 150)
     }
 
-    func reset() throws -> String {
+    public func reset() throws -> String {
         _ = try? off()
         killStaleHelpers()
         CGDisplayRestoreColorSyncSettings()
@@ -89,7 +90,7 @@ struct ProcessBrightnessController: BrightnessControlling {
         return "Normal brightness restored"
     }
 
-    func on(level: Int = 150) throws -> String {
+    public func on(level: Int = 150) throws -> String {
         guard BuiltInDisplay.info() != nil else {
             throw BrightnessError.unsupported("built-in display not found")
         }
@@ -124,7 +125,7 @@ struct ProcessBrightnessController: BrightnessControlling {
         return "RayXDR on: \(level)%"
     }
 
-    func off() throws -> String {
+    public func off() throws -> String {
         if let state = try? store.load(), let pid = state.helperPID, isProcessRunning(pid) {
             Darwin.kill(pid, SIGTERM)
             waitUntilStopped(pid: pid, timeout: 1.5)
@@ -138,7 +139,7 @@ struct ProcessBrightnessController: BrightnessControlling {
         return "RayXDR off: normal mode restored"
     }
 
-    func probe(json: Bool) throws -> String {
+    public func probe(json: Bool) throws -> String {
         let report = Probe.collect()
         if json {
             let data = try JSONEncoder.extraBrightness.encode(report)
@@ -190,8 +191,8 @@ struct ProcessBrightnessController: BrightnessControlling {
     }
 }
 
-enum LevelParser {
-    static func parse(_ rawValue: String) throws -> Int {
+public enum LevelParser {
+    public static func parse(_ rawValue: String) throws -> Int {
         let normalized = rawValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let presets = [
             "low": 120,

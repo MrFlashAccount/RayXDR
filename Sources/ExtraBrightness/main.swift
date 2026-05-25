@@ -1,4 +1,5 @@
 import Foundation
+import ExtraBrightnessCore
 
 enum CLIExitCode: Int32 {
     case success = 0

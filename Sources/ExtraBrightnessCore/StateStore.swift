@@ -56,7 +56,7 @@ struct StateStore {
 }
 
 extension JSONEncoder {
-    static var extraBrightness: JSONEncoder {
+    public static var extraBrightness: JSONEncoder {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
@@ -65,7 +65,7 @@ extension JSONEncoder {
 }
 
 extension JSONDecoder {
-    static var extraBrightness: JSONDecoder {
+    public static var extraBrightness: JSONDecoder {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return decoder

@@ -9,7 +9,8 @@ let package = Package(
     ],
     products: [
         .executable(name: "rayxdr", targets: ["ExtraBrightness"]),
-        .executable(name: "rayxdr-helper", targets: ["ExtraBrightnessHelper"])
+        .executable(name: "rayxdr-helper", targets: ["ExtraBrightnessHelper"]),
+        .executable(name: "rayxdr-menubar", targets: ["RayXDRMenuBar"])
     ],
     targets: [
         .target(name: "ExtraBrightnessCore"),
@@ -19,6 +20,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "ExtraBrightnessHelper",
+            dependencies: ["ExtraBrightnessCore"]
+        ),
+        .executableTarget(
+            name: "RayXDRMenuBar",
             dependencies: ["ExtraBrightnessCore"]
         )
     ]

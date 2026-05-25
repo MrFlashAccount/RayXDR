@@ -80,6 +80,23 @@ Commands exposed:
 
 The extension has no user-facing preferences. It uses the bundled CLI/helper and fixed `150%` target.
 
+## Menu Bar App
+
+RayXDR also has an experimental menu bar app. It uses the same Swift core as the CLI; it does not call the CLI.
+
+```bash
+./script/run-menubar.sh
+```
+
+This builds and opens `.build/release/RayXDR.app`.
+
+Menu controls:
+
+- `Standard` - restore normal brightness mode.
+- `RayXDR 150%` - enable fixed 150% mode.
+- `Reset` - emergency restore and cleanup.
+- Inline status block - shows whether RayXDR is running and the current target.
+
 ## Raycast Script Commands
 
 Script Commands are now fallback/legacy. The API extension above is preferred.
