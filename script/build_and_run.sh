@@ -7,18 +7,18 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 case "${1:-}" in
   --verify)
     /usr/bin/swift build -c release --package-path "$ROOT"
-    "$ROOT/.build/release/extra-brightness" probe
+    "$ROOT/.build/release/rayxdr" probe
     ;;
   --on)
     /usr/bin/swift build -c release --package-path "$ROOT"
-    "$ROOT/.build/release/extra-brightness" on "${2:-150}"
+    "$ROOT/.build/release/rayxdr" on "${2:-150}"
     ;;
   --off|--reset)
     /usr/bin/swift build -c release --package-path "$ROOT"
-    "$ROOT/.build/release/extra-brightness" reset
+    "$ROOT/.build/release/rayxdr" reset
     ;;
   *)
     /usr/bin/swift build -c release --package-path "$ROOT"
-    "$ROOT/.build/release/extra-brightness" probe
+    "$ROOT/.build/release/rayxdr" probe
     ;;
 esac

@@ -7,7 +7,7 @@ export default async function Command() {
   if (status.enabled) {
     await showToast({
       style: Toast.Style.Success,
-      title: `Extra Brightness on: ${status.requestedLevel ?? "unknown"}%`,
+      title: `RayXDR on: ${status.requestedLevel ?? "unknown"}%`,
       message: status.implementationMode,
     });
     return;
@@ -15,7 +15,7 @@ export default async function Command() {
 
   await showToast({
     style: Toast.Style.Success,
-    title: "Extra Brightness off",
+    title: "RayXDR off",
     message: status.implementationMode,
   });
 }

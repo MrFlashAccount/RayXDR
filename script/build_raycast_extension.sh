@@ -9,8 +9,9 @@ BIN_DIR="$EXTENSION_DIR/assets/bin"
 /usr/bin/swift build -c release --package-path "$ROOT"
 
 mkdir -p "$BIN_DIR"
-cp "$ROOT/.build/release/extra-brightness" "$BIN_DIR/extra-brightness"
-cp "$ROOT/.build/release/extra-brightness-helper" "$BIN_DIR/extra-brightness-helper"
-chmod +x "$BIN_DIR/extra-brightness" "$BIN_DIR/extra-brightness-helper"
+rm -f "$BIN_DIR/extra-brightness" "$BIN_DIR/extra-brightness-helper"
+cp "$ROOT/.build/release/rayxdr" "$BIN_DIR/rayxdr"
+cp "$ROOT/.build/release/rayxdr-helper" "$BIN_DIR/rayxdr-helper"
+chmod +x "$BIN_DIR/rayxdr" "$BIN_DIR/rayxdr-helper"
 
 echo "Bundled CLI into $BIN_DIR"

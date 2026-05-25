@@ -3,13 +3,13 @@
 import PackageDescription
 
 let package = Package(
-    name: "RayCastUltraBrightness",
+    name: "RayXDR",
     platforms: [
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "extra-brightness", targets: ["ExtraBrightness"]),
-        .executable(name: "extra-brightness-helper", targets: ["ExtraBrightnessHelper"])
+        .executable(name: "rayxdr", targets: ["ExtraBrightness"]),
+        .executable(name: "rayxdr-helper", targets: ["ExtraBrightnessHelper"])
     ],
     targets: [
         .target(name: "ExtraBrightnessCore"),

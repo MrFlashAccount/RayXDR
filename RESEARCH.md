@@ -17,7 +17,7 @@ MVP path is Raycast Script Commands. Raycast indexes scripts from a configured S
 This repo provides scripts under:
 
 ```text
-/Users/sergeygarin/Projects/RayCast Ultra Brightness/raycast
+/Users/sergeygarin/Projects/RayXDR/raycast
 ```
 
 Official docs checked:

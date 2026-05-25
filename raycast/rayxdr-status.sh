@@ -2,20 +2,20 @@
 
 # Required parameters:
 # @raycast.schemaVersion 1
-# @raycast.title Toggle Extra Brightness
+# @raycast.title RayXDR Status
 # @raycast.mode compact
 
 # Optional parameters:
-# @raycast.packageName Extra Brightness
-# @raycast.description Toggle the built-in XDR extra brightness mode.
+# @raycast.packageName RayXDR
+# @raycast.description Show current extra brightness status.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BIN="$ROOT/.build/release/extra-brightness"
+BIN="$ROOT/.build/release/rayxdr"
 
 if [[ ! -x "$BIN" ]]; then
   /usr/bin/swift build -c release --package-path "$ROOT" >/dev/null
 fi
 
-"$BIN" toggle
+"$BIN" status

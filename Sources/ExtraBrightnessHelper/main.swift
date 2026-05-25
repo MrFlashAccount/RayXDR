@@ -42,7 +42,7 @@ final class ExtraBrightnessHelper {
             }
         }
 
-        print("Extra Brightness helper running: \(targetLevel)%")
+        print("RayXDR helper running: \(targetLevel)%")
     }
 
     func stop() {

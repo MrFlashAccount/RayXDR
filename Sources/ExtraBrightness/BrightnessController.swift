@@ -95,7 +95,7 @@ struct ProcessBrightnessController: BrightnessControlling {
         }
 
         if let state = try store.load(), let pid = state.helperPID, isProcessRunning(pid) {
-            return "Extra Brightness already on: \(state.lastRequestedLevel)%"
+            return "RayXDR already on: \(state.lastRequestedLevel)%"
         }
 
         try? store.remove()
@@ -121,7 +121,7 @@ struct ProcessBrightnessController: BrightnessControlling {
             updatedAt: Date()
         ))
 
-        return "Extra Brightness on: \(level)%"
+        return "RayXDR on: \(level)%"
     }
 
     func off() throws -> String {
@@ -135,7 +135,7 @@ struct ProcessBrightnessController: BrightnessControlling {
 
         CGDisplayRestoreColorSyncSettings()
         try? store.remove()
-        return "Extra Brightness off: normal mode restored"
+        return "RayXDR off: normal mode restored"
     }
 
     func probe(json: Bool) throws -> String {
@@ -161,7 +161,7 @@ struct ProcessBrightnessController: BrightnessControlling {
         )
         return URL(fileURLWithPath: executablePath)
             .deletingLastPathComponent()
-            .appendingPathComponent("extra-brightness-helper")
+            .appendingPathComponent("rayxdr-helper")
     }
 
     private func isProcessRunning(_ pid: Int32) -> Bool {
@@ -184,7 +184,7 @@ struct ProcessBrightnessController: BrightnessControlling {
     private func killStaleHelpers() {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
-        process.arguments = ["-TERM", "-f", "extra-brightness-helper"]
+        process.arguments = ["-TERM", "-f", "rayxdr-helper|extra-brightness-helper"]
         try? process.run()
         process.waitUntilExit()
     }

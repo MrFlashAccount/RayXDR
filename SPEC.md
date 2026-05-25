@@ -1,8 +1,8 @@
-# Extra Brightness Raycast Utility Specification
+# RayXDR Raycast Utility Specification
 
 ## 1. Title
 
-Extra Brightness: minimal Raycast-controlled MacBook XDR brightness utility.
+RayXDR: minimal Raycast-controlled MacBook XDR brightness utility.
 
 ## 2. Objective
 
@@ -43,7 +43,7 @@ Primary implementation instruction for Codex: first produce a short research not
 
 ### Swift CLI/helper as core
 
-Create a tiny Swift command-line tool, tentatively `extra-brightness`, with subcommands for status, set, toggle, and reset. It owns all brightness-specific logic and exposes a stable CLI surface for Raycast wrappers.
+Create a tiny Swift command-line tool, tentatively `rayxdr`, with subcommands for status, set, toggle, and reset. It owns all brightness-specific logic and exposes a stable CLI surface for Raycast wrappers.
 
 The helper should research and choose one viable local implementation route:
 
@@ -77,24 +77,24 @@ State must not be required for `reset` to restore a safe normal mode.
 
 ## 7. Commands / UX
 
-### Toggle Extra Brightness
+### Toggle RayXDR
 
-Raycast command: `Toggle Extra Brightness`
+Raycast command: `Toggle RayXDR`
 
 Expected behavior:
 
-- If off, enable the last selected extra-brightness level or a conservative default such as `120`.
+- If off, enable the last selected rayxdr level or a conservative default such as `120`.
 - If on, restore normal brightness mode.
 - Idempotent and safe under repeated hotkey presses.
-- Output examples: `Extra Brightness on: 120%` or `Extra Brightness off: normal mode restored`.
+- Output examples: `RayXDR on: 120%` or `RayXDR off: normal mode restored`.
 
 Suggested CLI:
 
-- `extra-brightness toggle`
+- `rayxdr toggle`
 
-### Set Extra Brightness Level or presets
+### Set RayXDR Level or presets
 
-Raycast command: `Set Extra Brightness Level`
+Raycast command: `Set RayXDR Level`
 
 Expected behavior:
 
@@ -106,12 +106,12 @@ Expected behavior:
 
 Suggested CLI:
 
-- `extra-brightness set 120`
-- `extra-brightness set medium`
+- `rayxdr set 120`
+- `rayxdr set medium`
 
 ### Reset to normal brightness
 
-Raycast command: `Reset Extra Brightness`
+Raycast command: `Reset RayXDR`
 
 Expected behavior:
 
@@ -122,11 +122,11 @@ Expected behavior:
 
 Suggested CLI:
 
-- `extra-brightness reset`
+- `rayxdr reset`
 
 ### Status
 
-Raycast command: `Extra Brightness Status`
+Raycast command: `RayXDR Status`
 
 Expected behavior:
 
@@ -136,8 +136,8 @@ Expected behavior:
 
 Suggested CLI:
 
-- `extra-brightness status`
-- `extra-brightness status --json`
+- `rayxdr status`
+- `rayxdr status --json`
 
 ## 8. Technical research tasks for Codex before coding
 
@@ -194,7 +194,7 @@ Before implementation, create a short `RESEARCH.md` or top-of-PR note covering:
 - On unsupported hardware or unexpected display state, fail closed: do not apply partial extra brightness.
 - Do not run as root unless research proves there is no other safe path; if root is needed, stop and document why before implementing.
 - Do not install launch agents, login items, or daemons for MVP unless absolutely required and explicitly documented.
-- Keep a manual emergency rollback path in the README/spec, such as quitting the helper process and running `extra-brightness reset`.
+- Keep a manual emergency rollback path in the README/spec, such as quitting the helper process and running `rayxdr reset`.
 
 ## 11. Licensing requirements
 
@@ -212,10 +212,10 @@ MVP is accepted when:
 - Research note exists and states the inspected macOS version, hardware/display, Raycast convention, chosen implementation route, and license implications.
 - Swift helper builds locally.
 - Raycast exposes at least these commands:
-  - `Toggle Extra Brightness`
-  - `Set Extra Brightness Level` or preset commands
-  - `Reset Extra Brightness`
-  - `Extra Brightness Status`
+  - `Toggle RayXDR`
+  - `Set RayXDR Level` or preset commands
+  - `Reset RayXDR`
+  - `RayXDR Status`
 - On Sergey’s built-in display, `set 120` or equivalent visibly increases perceived brightness beyond normal 100%, or the research note clearly documents why this is unsupported.
 - `reset` restores normal brightness/display behavior.
 - Commands are safe to run repeatedly.
@@ -232,10 +232,10 @@ Keep the layout small. Suggested structure:
 - `Sources/ExtraBrightness/main.swift` — CLI entrypoint.
 - `Sources/ExtraBrightness/BrightnessController.swift` — selected implementation behind a small interface.
 - `Sources/ExtraBrightness/StateStore.swift` — optional state handling.
-- `raycast/toggle-extra-brightness.sh` — Raycast Script Command wrapper.
-- `raycast/set-extra-brightness.sh` — Raycast Script Command wrapper with argument or presets.
-- `raycast/reset-extra-brightness.sh` — Raycast Script Command wrapper.
-- `raycast/extra-brightness-status.sh` — Raycast Script Command wrapper.
+- `raycast/toggle-rayxdr.sh` — Raycast Script Command wrapper.
+- `raycast/set-rayxdr.sh` — Raycast Script Command wrapper with argument or presets.
+- `raycast/reset-rayxdr.sh` — Raycast Script Command wrapper.
+- `raycast/rayxdr-status.sh` — Raycast Script Command wrapper.
 - `LICENSES/Lunar-MIT.txt` — only if Lunar code is copied/adapted.
 - `LICENSES/BrightXDR-GPL-3.0.txt` — only if GPL-covered code is copied/derived and accepted.
 
@@ -245,15 +245,15 @@ If Codex finds an existing local repo/style for Sergey’s Raycast utilities, ad
 
 1. Build
    - Build the Swift helper from a clean checkout.
-   - Run `extra-brightness status` successfully.
+   - Run `rayxdr status` successfully.
 
 2. Environment detection
    - Confirm status reports built-in display and selected implementation mode.
    - Confirm unsupported environments fail with exit code `2` and no visual side effects.
 
 3. Set levels
-   - Run `extra-brightness set 100` and confirm normal mode.
-   - Run `extra-brightness set 120` and confirm visible extra brightness or documented unsupported result.
+   - Run `rayxdr set 100` and confirm normal mode.
+   - Run `rayxdr set 120` and confirm visible extra brightness or documented unsupported result.
    - Run higher presets only inside researched safe bounds.
 
 4. Toggle

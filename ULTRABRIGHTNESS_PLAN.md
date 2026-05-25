@@ -4,8 +4,8 @@
 
 Implement only:
 
-- `extra-brightness on` -> built-in MacBook XDR display boosted to fixed target, initially equivalent to about `150%`.
-- `extra-brightness off` / `reset` -> remove boost, restore normal macOS brightness range.
+- `rayxdr on` -> built-in MacBook XDR display boosted to fixed target, initially equivalent to about `150%`.
+- `rayxdr off` / `reset` -> remove boost, restore normal macOS brightness range.
 - Raycast command -> toggle on/off.
 
 No sliders, adaptive brightness, schedules, external displays, menu bar app, onboarding, StoreKit, widgets, hotkeys, battery automation.
@@ -96,20 +96,20 @@ Raycast cannot own long-lived overlay state reliably by itself. A CLI process ex
 
 Use two binaries/process roles:
 
-1. `extra-brightness` CLI
+1. `rayxdr` CLI
    - Raycast calls this.
    - Commands: `on`, `off`, `toggle`, `status`, `reset`.
    - Starts/stops helper process.
    - Writes small state file.
 
-2. `extra-brightness-helper`
+2. `rayxdr-helper`
    - Long-lived foreground/background agent process.
    - Owns NSApplication event loop.
    - Creates one 1x1 HDR overlay for built-in display only.
    - Applies fixed boost factor target.
    - Handles SIGTERM/SIGINT by restoring gamma and closing overlay.
 
-For MVP, helper can be launched by CLI with `Process` and stored PID. No LaunchAgent unless Raycast process lifetime causes issues.
+For MVP, helper can be launched by CLI with `Process` and stored PID. No autostart agent.
 
 ## Minimal State
 
@@ -133,11 +133,11 @@ State is convenience only. `reset` must also find/kill stale helpers by bundle/p
 ## Commands
 
 ```bash
-extra-brightness on
-extra-brightness off
-extra-brightness toggle
-extra-brightness status
-extra-brightness reset
+rayxdr on
+rayxdr off
+rayxdr toggle
+rayxdr status
+rayxdr reset
 ```
 
 Mappings:
@@ -191,9 +191,9 @@ Replace `PlaceholderBrightnessController` with process manager:
 
 Keep Script Commands, point them to:
 
-- `extra-brightness toggle`
-- `extra-brightness reset`
-- `extra-brightness status`
+- `rayxdr toggle`
+- `rayxdr reset`
+- `rayxdr status`
 
 For target simplicity, remove level prompt for now. Hardcode `150`.
 
@@ -226,12 +226,12 @@ Need calibrate visually on Sergey machine after first build. BrightIntosh uses d
 
 Implemented:
 
-- `extra-brightness probe`
-- `extra-brightness on [level]`
-- `extra-brightness off`
-- `extra-brightness toggle`
-- `extra-brightness reset`
-- `extra-brightness-helper` long-lived process
+- `rayxdr probe`
+- `rayxdr on [level]`
+- `rayxdr off`
+- `rayxdr toggle`
+- `rayxdr reset`
+- `rayxdr-helper` long-lived process
 - 1x1 EDR Metal overlay
 - gamma capture/apply/restore
 - Raycast probe/status/toggle/reset wrappers

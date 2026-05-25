@@ -13,13 +13,13 @@ let arguments = Array(CommandLine.arguments.dropFirst())
 func printUsage() {
     print("""
     Usage:
-      extra-brightness status [--json]
-      extra-brightness probe [--json]
-      extra-brightness on [level]
-      extra-brightness off
-      extra-brightness set <100|120|140|160|low|medium|high|max>
-      extra-brightness toggle
-      extra-brightness reset
+      rayxdr status [--json]
+      rayxdr probe [--json]
+      rayxdr on [level]
+      rayxdr off
+      rayxdr set <100|120|140|160|low|medium|high|max>
+      rayxdr toggle
+      rayxdr reset
     """)
 }
 
@@ -42,9 +42,9 @@ do {
         } else if let reason = status.unsupportedReason {
             print("Unsupported: \(reason)")
         } else if status.enabled, let level = status.requestedLevel {
-            print("Extra Brightness on: \(level)%")
+            print("RayXDR on: \(level)%")
         } else {
-            print("Extra Brightness off")
+            print("RayXDR off")
         }
         exit(.success)
 

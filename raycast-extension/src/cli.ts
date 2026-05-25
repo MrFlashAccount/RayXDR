@@ -7,17 +7,17 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const targetLevel = "150";
 const cliCandidates = [
-  path.resolve(environment.assetsPath, "bin", "extra-brightness"),
-  path.resolve(process.cwd(), "assets", "bin", "extra-brightness"),
-  path.resolve(__dirname, "..", "assets", "bin", "extra-brightness"),
-  path.resolve(__dirname, "..", "..", "assets", "bin", "extra-brightness"),
+  path.resolve(environment.assetsPath, "bin", "rayxdr"),
+  path.resolve(process.cwd(), "assets", "bin", "rayxdr"),
+  path.resolve(__dirname, "..", "assets", "bin", "rayxdr"),
+  path.resolve(__dirname, "..", "..", "assets", "bin", "rayxdr"),
 ];
 
 function getCliPath(): string {
   const cliPath = cliCandidates.find((candidate) => fs.existsSync(candidate));
 
   if (!cliPath) {
-    throw new Error("Bundled extra-brightness CLI missing. Run `npm run build:cli` from raycast-extension.");
+    throw new Error("Bundled rayxdr CLI missing. Run `npm run build:cli` from raycast-extension.");
   }
 
   return cliPath;
@@ -62,7 +62,7 @@ export async function runCli(args: string[], successTitle?: string): Promise<voi
           : String(error);
     await showToast({
       style: Toast.Style.Failure,
-      title: "Extra Brightness failed",
+      title: "RayXDR failed",
       message,
     });
   }

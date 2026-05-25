@@ -56,7 +56,7 @@ public final class EDROverlayWindowController: NSWindowController, NSWindowDeleg
         self.screen = screen
         let rect = NSRect(x: screen.frame.origin.x, y: screen.frame.maxY - 1, width: 1, height: 1)
         let window = NSWindow(contentRect: rect, styleMask: [], backing: .buffered, defer: false)
-        window.title = "ExtraBrightness EDR Overlay"
+        window.title = "RayXDR EDR Overlay"
         window.collectionBehavior = [.stationary, .ignoresCycle, .canJoinAllSpaces]
         window.level = .screenSaver
         window.isOpaque = false

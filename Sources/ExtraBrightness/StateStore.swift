@@ -11,23 +11,31 @@ struct ExtraBrightnessState: Codable {
 
 struct StateStore {
     private let fileURL: URL
+    private let legacyFileURL: URL
 
     init(
         fileManager: FileManager = .default,
         homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser
     ) {
         self.fileURL = homeDirectory
+            .appendingPathComponent("Library/Application Support/RayXDR", isDirectory: true)
+            .appendingPathComponent("state.json")
+        self.legacyFileURL = homeDirectory
             .appendingPathComponent("Library/Application Support/ExtraBrightness", isDirectory: true)
             .appendingPathComponent("state.json")
     }
 
     func load() throws -> ExtraBrightnessState? {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else {
-            return nil
+        for url in [fileURL, legacyFileURL] {
+            guard FileManager.default.fileExists(atPath: url.path) else {
+                continue
+            }
+
+            let data = try Data(contentsOf: url)
+            return try JSONDecoder.extraBrightness.decode(ExtraBrightnessState.self, from: data)
         }
 
-        let data = try Data(contentsOf: fileURL)
-        return try JSONDecoder.extraBrightness.decode(ExtraBrightnessState.self, from: data)
+        return nil
     }
 
     func save(_ state: ExtraBrightnessState) throws {
@@ -41,8 +49,8 @@ struct StateStore {
     }
 
     func remove() throws {
-        if FileManager.default.fileExists(atPath: fileURL.path) {
-            try FileManager.default.removeItem(at: fileURL)
+        for url in [fileURL, legacyFileURL] where FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
         }
     }
 }
