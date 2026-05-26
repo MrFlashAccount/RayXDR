@@ -27,7 +27,7 @@ cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
     <key>CFBundleExecutable</key>
     <string>RayXDR</string>
     <key>CFBundleIdentifier</key>
-    <string>dev.sergeygarin.RayXDR</string>
+    <string>app.rayxdr.RayXDR</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

@@ -1,12 +1,12 @@
 # RayXDR
 
-Experimental Swift macOS utility for toggling extra brightness on Sergey's built-in MacBook XDR display.
+Experimental Swift macOS utility for toggling extra brightness on built-in MacBook XDR displays.
 
 RayXDR is a pure Swift project: shared core, CLI, long-lived brightness helper, and a menu bar app.
 
 ## Disclosure
 
-This is an experimental personal utility for Sergey's own MacBook XDR display. It is not affiliated with Lunar, DisplayBuddy, BrightXDR, Apple, or any other brightness-control app/vendor.
+This is an experimental utility for built-in MacBook XDR displays. It is not affiliated with Lunar, DisplayBuddy, BrightXDR, Apple, or any other brightness-control app/vendor.
 
 The implementation is based on local research and uses macOS display behavior that can change between macOS releases. Lunar and BrightXDR were reviewed only as public references for understanding the problem space; their branding, UI, assets, and source code are not copied into this project.
 
