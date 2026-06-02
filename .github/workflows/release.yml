@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version, for example 0.1.0 or v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  dmg:
+    name: Build DMG
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release version
+        run: |
+          raw_version="${{ inputs.version }}"
+          version="${raw_version#v}"
+
+          if [[ ! "$version" =~ ^[0-9]+[.][0-9]+[.][0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid version: $raw_version"
+            echo "Use a semantic version like 0.1.0 or v0.1.0."
+            exit 1
+          fi
+
+          release_tag="v$version"
+          echo "RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"
+          echo "RAYXDR_VERSION=$version" >> "$GITHUB_ENV"
+          echo "DMG_PATH=dist/RayXDR-$version.dmg" >> "$GITHUB_ENV"
+
+      - name: Show toolchain
+        run: |
+          swift --version
+          xcodebuild -version
+
+      - name: Build DMG
+        run: ./script/build-dmg.sh "$RAYXDR_VERSION"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RayXDR-${{ env.RAYXDR_VERSION }}.dmg
+          path: ${{ env.DMG_PATH }}
+          if-no-files-found: error
+
+      - name: Create release tag
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            git fetch origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+            tag_commit="$(git rev-list -n 1 "$RELEASE_TAG")"
+
+            if [ "$tag_commit" != "$GITHUB_SHA" ]; then
+              echo "Tag $RELEASE_TAG already exists on $tag_commit, not $GITHUB_SHA."
+              exit 1
+            fi
+
+            echo "Tag $RELEASE_TAG already exists on this commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$RELEASE_TAG" -m "RayXDR $RELEASE_TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$RELEASE_TAG"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "$DMG_PATH" --clobber
+          else
+            gh release create "$RELEASE_TAG" "$DMG_PATH" \
+              --title "RayXDR $RELEASE_TAG" \
+              --notes "RayXDR $RELEASE_TAG"
+          fi

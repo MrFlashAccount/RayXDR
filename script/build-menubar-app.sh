@@ -6,6 +6,8 @@ BUILD_DIR="$ROOT/.build/release"
 APP_DIR="$BUILD_DIR/RayXDR.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
+VERSION="${RAYXDR_VERSION:-0.1.0}"
+BUILD_NUMBER="${RAYXDR_BUILD_NUMBER:-1}"
 
 /usr/bin/swift build -c release --package-path "$ROOT" --product rayxdr-menubar
 /usr/bin/swift build -c release --package-path "$ROOT" --product rayxdr-helper
@@ -47,5 +49,8 @@ cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
 </dict>
 </plist>
 PLIST
+
+/usr/bin/plutil -replace CFBundleShortVersionString -string "$VERSION" "$CONTENTS_DIR/Info.plist"
+/usr/bin/plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$CONTENTS_DIR/Info.plist"
 
 echo "$APP_DIR"

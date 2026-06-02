@@ -2,5 +2,6 @@
 .swiftpm/
 DerivedData/
 Package.resolved
+dist/
 
 .DS_Store
