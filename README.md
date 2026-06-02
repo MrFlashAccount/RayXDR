@@ -1,27 +1,25 @@
-# RayXDR
+<p align="center">
+  <img src="assets/readme-hero.png" alt="RayXDR glowing display hero" width="760">
+</p>
 
-Experimental Swift macOS utility for toggling extra brightness on built-in MacBook XDR displays.
+<h1 align="center">RayXDR</h1>
 
-RayXDR is a pure Swift project: shared core, CLI, long-lived brightness helper, and a menu bar app.
+<p align="center">
+  Extra brightness controls for built-in MacBook XDR displays.
+</p>
 
-## Disclosure
+RayXDR is an experimental Swift macOS utility for toggling extra brightness on built-in MacBook XDR displays.
 
-This is an experimental utility for built-in MacBook XDR displays. It is not affiliated with Lunar, DisplayBuddy, BrightXDR, Apple, or any other brightness-control app/vendor.
+It ships as a pure Swift package with a shared core, CLI, long-lived brightness helper, and menu bar app.
 
-The implementation is based on local research and uses macOS display behavior that can change between macOS releases. Lunar and BrightXDR were reviewed only as public references for understanding the problem space; their branding, UI, assets, and source code are not copied into this project.
+## What It Does
 
-Use `rayxdr reset` or the menu bar `Reset` action if the display state looks wrong.
+- `Standard` restores normal brightness mode.
+- `RayXDR 150%` enables fixed 150% mode.
+- `Reset` performs emergency restore and cleanup.
+- `status`, `probe`, and `reset` are safe diagnostic commands.
 
-## Layout
-
-- `Package.swift` - Swift package for all products.
-- `Sources/ExtraBrightnessCore` - shared brightness core, probe, EDR overlay, gamma restore, display helpers.
-- `Sources/ExtraBrightness` - `rayxdr` CLI entrypoint.
-- `Sources/ExtraBrightnessHelper` - long-lived helper process for the EDR/gamma boost.
-- `Sources/RayXDRMenuBar` - menu bar app.
-- `script/build-menubar-app.sh` - builds `.build/release/RayXDR.app`.
-- `script/run-menubar.sh` - builds and opens the menu bar app.
-- `script/build_and_run.sh` - local verify helper.
+The brightness boost path is experimental and uses an EDR overlay plus gamma adjustment helper.
 
 ## Build
 
@@ -45,29 +43,6 @@ rayxdr-menubar
 
 This builds and opens `.build/release/RayXDR.app`.
 
-Menu controls:
-
-- `Standard` - restore normal brightness mode.
-- `RayXDR 150%` - enable fixed 150% mode.
-- `Reset` - emergency restore and cleanup.
-- Inline status block - shows whether RayXDR is running and the current target.
-
-## Release
-
-Local DMG build:
-
-```bash
-./script/build-dmg.sh 0.1.0
-```
-
-GitHub Release is published manually from Actions:
-
-1. Open `Actions` -> `Release` -> `Run workflow`.
-2. Enter `0.1.0` or `v0.1.0`.
-3. Run from the branch/commit that should be released.
-
-The workflow creates tag `v0.1.0`, builds `RayXDR-0.1.0.dmg`, and uploads it to the GitHub Release.
-
 ## CLI
 
 ```bash
@@ -81,7 +56,41 @@ The workflow creates tag `v0.1.0`, builds `RayXDR-0.1.0.dmg`, and uploads it to 
 .build/release/rayxdr toggle
 ```
 
-`probe`, `status`, and `reset` are safe. `on`, `set`, and `toggle` are experimental and use the EDR/gamma helper.
+## Release
+
+Local DMG build:
+
+```bash
+./script/build-dmg.sh 0.1.0
+```
+
+GitHub Release is published manually from Actions:
+
+1. Open `Actions` -> `Release` -> `Run workflow`.
+2. Enter `0.1.0` or `v0.1.0`.
+3. Run from the branch or commit that should be released.
+
+The workflow creates tag `v0.1.0`, builds `RayXDR-0.1.0.dmg`, and uploads it to the GitHub Release.
+
+## Project Layout
+
+- `Package.swift` - Swift package for all products.
+- `Sources/ExtraBrightnessCore` - shared brightness core, probe, EDR overlay, gamma restore, display helpers.
+- `Sources/ExtraBrightness` - `rayxdr` CLI entrypoint.
+- `Sources/ExtraBrightnessHelper` - long-lived helper process for the EDR/gamma boost.
+- `Sources/RayXDRMenuBar` - menu bar app.
+- `script/build-menubar-app.sh` - builds `.build/release/RayXDR.app`.
+- `script/build-dmg.sh` - builds `dist/RayXDR-<version>.dmg`.
+- `script/run-menubar.sh` - builds and opens the menu bar app.
+- `script/build_and_run.sh` - local verify helper.
+
+## Safety
+
+This is an experimental utility for built-in MacBook XDR displays. macOS display behavior can change between releases.
+
+Use `rayxdr reset` or the menu bar `Reset` action if the display state looks wrong.
+
+RayXDR is not affiliated with Lunar, DisplayBuddy, BrightXDR, Apple, or any other brightness-control app/vendor. Public references were reviewed only to understand the problem space; branding, UI, assets, and source code are not copied.
 
 ## Next Work
 
