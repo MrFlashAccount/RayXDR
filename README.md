@@ -52,6 +52,22 @@ Menu controls:
 - `Reset` - emergency restore and cleanup.
 - Inline status block - shows whether RayXDR is running and the current target.
 
+## Release
+
+Local DMG build:
+
+```bash
+./script/build-dmg.sh 0.1.0
+```
+
+GitHub Release is published manually from Actions:
+
+1. Open `Actions` -> `Release` -> `Run workflow`.
+2. Enter `0.1.0` or `v0.1.0`.
+3. Run from the branch/commit that should be released.
+
+The workflow creates tag `v0.1.0`, builds `RayXDR-0.1.0.dmg`, and uploads it to the GitHub Release.
+
 ## CLI
 
 ```bash
