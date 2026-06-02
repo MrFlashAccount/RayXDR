@@ -8,9 +8,9 @@
   Push built-in MacBook XDR displays beyond standard brightness.
 </p>
 
-RayXDR is a small experimental macOS utility for forcing extra brightness on built-in MacBook XDR displays.
+RayXDR is a small macOS utility for forcing extra brightness on built-in MacBook XDR displays.
 
-It exists for the moments when normal brightness is not enough: harsh daylight, quick HDR/EDR checks, or simply using the display headroom Apple does not expose as a simple switch.
+It exists because this tiny but useful feature is often locked behind paid apps. RayXDR keeps it simple: install it, use it, pay nothing.
 
 ## What It Does
 
