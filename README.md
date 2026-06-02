@@ -16,6 +16,8 @@ It exists because this tiny but useful feature is often locked behind paid apps.
 
 [Download the latest release](https://github.com/MrFlashAccount/RayXDR/releases/latest), open the DMG, and drag `RayXDR.app` to `Applications`.
 
+RayXDR is not notarized. On first launch, use right click -> `Open`.
+
 ## Usage
 
 Launch RayXDR from `Applications`. Use the menu bar icon to switch between `Standard`, `RayXDR 150%`, and `Reset`.
