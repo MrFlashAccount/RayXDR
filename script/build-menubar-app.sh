@@ -6,17 +6,20 @@ BUILD_DIR="$ROOT/.build/release"
 APP_DIR="$BUILD_DIR/RayXDR.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
+RESOURCES_DIR="$CONTENTS_DIR/Resources"
 VERSION="${RAYXDR_VERSION:-0.1.0}"
 BUILD_NUMBER="${RAYXDR_BUILD_NUMBER:-1}"
+ICON_SOURCE="$ROOT/assets/AppIcon.icns"
 
 /usr/bin/swift build -c release --package-path "$ROOT" --product rayxdr-menubar
 /usr/bin/swift build -c release --package-path "$ROOT" --product rayxdr-helper
 
 rm -rf "$APP_DIR"
-mkdir -p "$MACOS_DIR"
+mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
 cp "$BUILD_DIR/rayxdr-menubar" "$MACOS_DIR/RayXDR"
 cp "$BUILD_DIR/rayxdr-helper" "$MACOS_DIR/rayxdr-helper"
+cp "$ICON_SOURCE" "$RESOURCES_DIR/RayXDR.icns"
 chmod +x "$MACOS_DIR/RayXDR" "$MACOS_DIR/rayxdr-helper"
 
 cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
@@ -30,6 +33,8 @@ cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
     <string>RayXDR</string>
     <key>CFBundleIdentifier</key>
     <string>app.rayxdr.RayXDR</string>
+    <key>CFBundleIconFile</key>
+    <string>RayXDR</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
@@ -52,5 +57,6 @@ PLIST
 
 /usr/bin/plutil -replace CFBundleShortVersionString -string "$VERSION" "$CONTENTS_DIR/Info.plist"
 /usr/bin/plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$CONTENTS_DIR/Info.plist"
+/usr/bin/codesign --force --deep --sign - "$APP_DIR"
 
 echo "$APP_DIR"
