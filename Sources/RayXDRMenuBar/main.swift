@@ -133,6 +133,19 @@ private struct UpdateChecker: Sendable {
         if [ ! -d "$source_app" ]; then
           exit 1
         fi
+        if [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$source_app/Contents/Info.plist")" != "app.rayxdr.RayXDR" ]; then
+          exit 1
+        fi
+        if [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$source_app/Contents/Info.plist")" != "RayXDR" ]; then
+          exit 1
+        fi
+        if [ ! -x "$source_app/Contents/MacOS/RayXDR" ]; then
+          exit 1
+        fi
+        if [ ! -x "$source_app/Contents/MacOS/rayxdr-helper" ]; then
+          exit 1
+        fi
+        /usr/bin/codesign --verify --deep --strict "$source_app" >/dev/null
 
         /bin/rm -rf "$target_app"
         /usr/bin/ditto "$source_app" "$target_app"
