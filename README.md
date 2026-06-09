@@ -22,4 +22,8 @@ RayXDR is not notarized. On first launch, use right click -> `Open`.
 
 Launch RayXDR from `Applications`. Use the menu bar icon to switch between `Standard`, `RayXDR 150%`, and `Reset`.
 
+Enable `Launch at Login` from the menu if you want RayXDR to start automatically.
+
+When a new version is available, the menu bar title gets a dot and the menu shows `Update`.
+
 Use `Reset` if the display state looks wrong. RayXDR is built for built-in MacBook XDR displays.
