@@ -10,7 +10,18 @@ TEMP_DMG_PATH="$DIST_DIR/RayXDR-$VERSION-rw.dmg"
 STAGE_DIR="$DIST_DIR/dmg-root"
 BACKGROUND_SOURCE="$ROOT/assets/dmg-background.png"
 VOLUME_NAME="RayXDR"
+BUILD_VOLUME_NAME="$VOLUME_NAME-build-$$"
 
+detach_temp_dmg() {
+  /usr/bin/hdiutil info | /usr/bin/awk -v image_path="$TEMP_DMG_PATH" '
+    /^image-path/ { active = (index($0, image_path) > 0) }
+    active && /^\/dev\/disk[0-9]+s[0-9]+/ { print $1 }
+  ' | while read -r device; do
+    /usr/bin/hdiutil detach "$device" >/dev/null 2>&1 || true
+  done
+}
+
+detach_temp_dmg
 rm -rf "$DIST_DIR"
 mkdir -p "$STAGE_DIR/.background"
 
@@ -22,7 +33,7 @@ STAGED_APP_DIR="$STAGE_DIR/RayXDR.app"
 /bin/cp "$BACKGROUND_SOURCE" "$STAGE_DIR/.background/dmg-background.png"
 
 /usr/bin/hdiutil create \
-  -volname "$VOLUME_NAME" \
+  -volname "$BUILD_VOLUME_NAME" \
   -srcfolder "$STAGE_DIR" \
   -ov \
   -fs HFS+ \
@@ -31,42 +42,44 @@ STAGED_APP_DIR="$STAGE_DIR/RayXDR.app"
 
 MOUNT_DIR=""
 cleanup() {
-  if [ -n "$MOUNT_DIR" ]; then
-    /usr/bin/hdiutil detach "$MOUNT_DIR" >/dev/null 2>&1 || true
-  fi
+  detach_temp_dmg
   /bin/rm -rf "$STAGE_DIR" "$TEMP_DMG_PATH"
 }
 trap cleanup EXIT
 
-MOUNT_DIR="$(/usr/bin/hdiutil attach "$TEMP_DMG_PATH" \
+ATTACH_OUTPUT="$(/usr/bin/hdiutil attach "$TEMP_DMG_PATH" \
   -readwrite \
   -noverify \
-  -noautoopen | /usr/bin/awk -F'\t' '$0 ~ /\/Volumes\// {print $NF; exit}')"
+  -noautoopen)"
+MOUNT_DIR="$(/usr/bin/printf '%s\n' "$ATTACH_OUTPUT" | /usr/bin/awk -F'\t' '$0 ~ /\/Volumes\// {print $NF; exit}')"
 /usr/bin/chflags hidden "$MOUNT_DIR/.background"
 BACKGROUND_ALIAS="$MOUNT_DIR/.background/dmg-background.png"
 
 /usr/bin/osascript <<OSA
+set dmgFolder to POSIX file "$MOUNT_DIR" as alias
 set backgroundImage to POSIX file "$BACKGROUND_ALIAS" as alias
 
 tell application "Finder"
-    tell disk "$VOLUME_NAME"
+    tell disk "$BUILD_VOLUME_NAME"
         open
-        if not (exists item "Applications" of container window) then
-            make new alias file to (POSIX file "/Applications" as alias) at container window with properties {name:"Applications"}
+        set dmgWindow to container window
+
+        if not (exists item "Applications" of dmgWindow) then
+            make new alias file to (POSIX file "/Applications" as alias) at dmgWindow with properties {name:"Applications"}
         end if
 
-        set current view of container window to icon view
-        set toolbar visible of container window to false
-        set statusbar visible of container window to false
-        set bounds of container window to {100, 100, 740, 500}
+        set current view of dmgWindow to icon view
+        set toolbar visible of dmgWindow to false
+        set statusbar visible of dmgWindow to false
+        set bounds of dmgWindow to {100, 100, 740, 500}
 
-        set viewOptions to icon view options of container window
+        set viewOptions to icon view options of dmgWindow
         set arrangement of viewOptions to not arranged
         set icon size of viewOptions to 128
         set background picture of viewOptions to backgroundImage
 
-        set position of item "RayXDR.app" of container window to {180, 220}
-        set position of item "Applications" of container window to {460, 220}
+        set position of item "RayXDR.app" of dmgWindow to {180, 220}
+        set position of item "Applications" of dmgWindow to {460, 220}
         close
         open
         update without registering applications
@@ -78,7 +91,9 @@ OSA
 
 /bin/sync
 /bin/rm -rf "$MOUNT_DIR/.fseventsd" "$MOUNT_DIR/.Trashes"
-/usr/bin/hdiutil detach "$MOUNT_DIR" >/dev/null
+/usr/sbin/diskutil rename "$MOUNT_DIR" "$VOLUME_NAME" >/dev/null
+detach_temp_dmg
+MOUNT_DIR=""
 
 /usr/bin/hdiutil convert "$TEMP_DMG_PATH" \
   -format UDZO \
