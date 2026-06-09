@@ -1,4 +1,5 @@
 import AppKit
+import CryptoKit
 import ExtraBrightnessCore
 import ServiceManagement
 
@@ -6,11 +7,14 @@ private struct UpdateInfo {
     let version: String
     let tagName: String
     let dmgURL: URL
+    let expectedDigest: String
 }
 
 private enum UpdateError: LocalizedError {
     case invalidResponse
     case noCompatibleAsset
+    case missingDigest
+    case checksumMismatch
     case notInstalledInApplications
     case helperScriptFailed
 
@@ -20,6 +24,10 @@ private enum UpdateError: LocalizedError {
             "RayXDR could not read the latest GitHub release."
         case .noCompatibleAsset:
             "The latest GitHub release does not include a RayXDR DMG."
+        case .missingDigest:
+            "The latest GitHub release does not include a checksum."
+        case .checksumMismatch:
+            "The downloaded RayXDR update did not match the expected checksum."
         case .notInstalledInApplications:
             "Move RayXDR to Applications before updating."
         case .helperScriptFailed:
@@ -41,10 +49,12 @@ private struct UpdateChecker: Sendable {
 
     private struct GitHubAsset: Decodable {
         let name: String
+        let digest: String?
         let browserDownloadURL: URL
 
         enum CodingKeys: String, CodingKey {
             case name
+            case digest
             case browserDownloadURL = "browser_download_url"
         }
     }
@@ -73,7 +83,16 @@ private struct UpdateChecker: Sendable {
             throw UpdateError.noCompatibleAsset
         }
 
-        return UpdateInfo(version: latestVersion, tagName: release.tagName, dmgURL: asset.browserDownloadURL)
+        guard let digest = asset.digest?.lowercased(), digest.hasPrefix("sha256:") else {
+            throw UpdateError.missingDigest
+        }
+
+        return UpdateInfo(
+            version: latestVersion,
+            tagName: release.tagName,
+            dmgURL: asset.browserDownloadURL,
+            expectedDigest: digest
+        )
     }
 
     func install(_ update: UpdateInfo) async throws {
@@ -84,11 +103,11 @@ private struct UpdateChecker: Sendable {
             throw UpdateError.notInstalledInApplications
         }
 
-        let downloadURL = try await download(update.dmgURL)
+        let downloadURL = try await download(update.dmgURL, expectedDigest: update.expectedDigest)
         try startInstaller(downloadURL: downloadURL, targetAppURL: appURL)
     }
 
-    private func download(_ url: URL) async throws -> URL {
+    private func download(_ url: URL, expectedDigest: String) async throws -> URL {
         var request = URLRequest(url: url)
         request.setValue("RayXDR", forHTTPHeaderField: "User-Agent")
 
@@ -101,6 +120,14 @@ private struct UpdateChecker: Sendable {
             .appendingPathComponent("RayXDR-update-\(UUID().uuidString)")
             .appendingPathExtension("dmg")
         try FileManager.default.moveItem(at: temporaryURL, to: destinationURL)
+
+        let data = try Data(contentsOf: destinationURL)
+        let actualDigest = "sha256:" + SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        guard actualDigest == expectedDigest else {
+            try? FileManager.default.removeItem(at: destinationURL)
+            throw UpdateError.checksumMismatch
+        }
+
         return destinationURL
     }
 
