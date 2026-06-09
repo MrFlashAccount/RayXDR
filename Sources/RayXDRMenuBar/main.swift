@@ -1,5 +1,6 @@
 import AppKit
 import ExtraBrightnessCore
+import ServiceManagement
 
 @MainActor final class StatusMenuView: NSView {
     private let titleLabel = NSTextField(labelWithString: "")
@@ -65,6 +66,7 @@ import ExtraBrightnessCore
     private let standardItem = NSMenuItem(title: "Standard", action: #selector(selectStandard), keyEquivalent: "")
     private let rayxdrItem = NSMenuItem(title: "RayXDR 150%", action: #selector(selectRayXDR), keyEquivalent: "")
     private let resetItem = NSMenuItem(title: "Reset", action: #selector(reset), keyEquivalent: "")
+    private let launchAtLoginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -80,10 +82,13 @@ import ExtraBrightnessCore
         standardItem.target = self
         rayxdrItem.target = self
         resetItem.target = self
+        launchAtLoginItem.target = self
         menu.addItem(standardItem)
         menu.addItem(rayxdrItem)
         menu.addItem(.separator())
         menu.addItem(resetItem)
+        menu.addItem(.separator())
+        menu.addItem(launchAtLoginItem)
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit", action: #selector(quit), keyEquivalent: "q").target = self
 
@@ -106,6 +111,25 @@ import ExtraBrightnessCore
 
     @objc private func reset() {
         run { try controller.reset() }
+    }
+
+    @objc private func toggleLaunchAtLogin() {
+        do {
+            switch SMAppService.mainApp.status {
+            case .enabled:
+                try SMAppService.mainApp.unregister()
+            case .requiresApproval:
+                openLoginItemsSettings()
+            case .notRegistered, .notFound:
+                try SMAppService.mainApp.register()
+            @unknown default:
+                try SMAppService.mainApp.register()
+            }
+        } catch {
+            present(error: error)
+        }
+
+        refreshLaunchAtLogin()
     }
 
     @objc private func quit() {
@@ -134,6 +158,33 @@ import ExtraBrightnessCore
             rayxdrItem.state = .off
             statusItem.button?.title = "XDR!"
         }
+
+        refreshLaunchAtLogin()
+    }
+
+    private func refreshLaunchAtLogin() {
+        switch SMAppService.mainApp.status {
+        case .enabled:
+            launchAtLoginItem.title = "Launch at Login"
+            launchAtLoginItem.state = .on
+        case .requiresApproval:
+            launchAtLoginItem.title = "Launch at Login (Needs Approval)"
+            launchAtLoginItem.state = .off
+        case .notRegistered, .notFound:
+            launchAtLoginItem.title = "Launch at Login"
+            launchAtLoginItem.state = .off
+        @unknown default:
+            launchAtLoginItem.title = "Launch at Login"
+            launchAtLoginItem.state = .off
+        }
+    }
+
+    private func openLoginItemsSettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") else {
+            return
+        }
+
+        NSWorkspace.shared.open(url)
     }
 
     private func present(error: Error) {
