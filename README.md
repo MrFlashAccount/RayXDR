@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/readme-hero.png" alt="RayXDR glowing display hero" width="760">
+  <img src="assets/readme-hero.webp" alt="RayXDR glowing display hero" width="760">
 </p>
 
 <h1 align="center">RayXDR</h1>
