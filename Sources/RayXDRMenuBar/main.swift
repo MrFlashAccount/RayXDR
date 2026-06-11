@@ -295,6 +295,7 @@ private extension String {
     private let rayxdrItem = NSMenuItem(title: "RayXDR 150%", action: #selector(selectRayXDR), keyEquivalent: "")
     private let resetItem = NSMenuItem(title: "Reset", action: #selector(reset), keyEquivalent: "")
     private let updateItem = NSMenuItem(title: "Update...", action: #selector(installUpdate), keyEquivalent: "")
+    private let checkUpdatesItem = NSMenuItem(title: "Check for Updates...", action: #selector(checkForUpdates), keyEquivalent: "")
     private let launchAtLoginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
     private var updateInfo: UpdateInfo?
     private var isCheckingForUpdates = false
@@ -317,6 +318,7 @@ private extension String {
         rayxdrItem.target = self
         resetItem.target = self
         updateItem.target = self
+        checkUpdatesItem.target = self
         launchAtLoginItem.target = self
         menu.addItem(standardItem)
         menu.addItem(rayxdrItem)
@@ -324,6 +326,7 @@ private extension String {
         menu.addItem(resetItem)
         menu.addItem(.separator())
         menu.addItem(updateItem)
+        menu.addItem(checkUpdatesItem)
         menu.addItem(.separator())
         menu.addItem(launchAtLoginItem)
         menu.addItem(.separator())
@@ -374,6 +377,10 @@ private extension String {
                 }
             }
         }
+    }
+
+    @objc private func checkForUpdates() {
+        checkForUpdatesIfNeeded(force: true, presentsNoUpdateAlert: true)
     }
 
     @objc private func toggleLaunchAtLogin() {
@@ -452,7 +459,7 @@ private extension String {
         NSWorkspace.shared.open(url)
     }
 
-    private func checkForUpdatesIfNeeded(force: Bool = false) {
+    private func checkForUpdatesIfNeeded(force: Bool = false, presentsNoUpdateAlert: Bool = false) {
         guard !isCheckingForUpdates else {
             return
         }
@@ -475,12 +482,20 @@ private extension String {
                     lastUpdateCheck = Date()
                     refreshStatusTitle()
                     refreshUpdateItem()
+
+                    if presentsNoUpdateAlert, latestUpdate == nil {
+                        presentUpToDate()
+                    }
                 }
             } catch {
                 await MainActor.run {
                     isCheckingForUpdates = false
                     lastUpdateCheck = Date()
                     refreshUpdateItem()
+
+                    if presentsNoUpdateAlert {
+                        present(error: error)
+                    }
                 }
             }
         }
@@ -495,19 +510,35 @@ private extension String {
             updateItem.title = "Installing Update..."
             updateItem.isEnabled = false
             updateItem.isHidden = false
+            checkUpdatesItem.title = "Check for Updates..."
+            checkUpdatesItem.isEnabled = false
         } else if isCheckingForUpdates {
             updateItem.title = "Checking for Updates..."
             updateItem.isEnabled = false
             updateItem.isHidden = updateInfo == nil
+            checkUpdatesItem.title = "Checking for Updates..."
+            checkUpdatesItem.isEnabled = false
         } else if let updateInfo {
             updateItem.title = "Update to \(updateInfo.tagName)..."
             updateItem.isEnabled = true
             updateItem.isHidden = false
+            checkUpdatesItem.title = "Check for Updates..."
+            checkUpdatesItem.isEnabled = true
         } else {
             updateItem.title = "Update..."
             updateItem.isEnabled = false
             updateItem.isHidden = true
+            checkUpdatesItem.title = "Check for Updates..."
+            checkUpdatesItem.isEnabled = true
         }
+    }
+
+    private func presentUpToDate() {
+        let alert = NSAlert()
+        alert.messageText = "RayXDR is up to date"
+        alert.informativeText = "You are running the latest available version."
+        alert.alertStyle = .informational
+        alert.runModal()
     }
 
     private func present(error: Error) {
