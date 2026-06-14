@@ -36,6 +36,35 @@ private enum UpdateError: LocalizedError {
     }
 }
 
+private enum PreferredBrightnessMode: String {
+    case standard
+    case rayxdr150
+}
+
+private final class AppPreferences {
+    private static let preferredBrightnessModeKey = "preferredBrightnessMode"
+
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    var preferredBrightnessMode: PreferredBrightnessMode {
+        get {
+            guard let rawValue = defaults.string(forKey: Self.preferredBrightnessModeKey),
+                  let mode = PreferredBrightnessMode(rawValue: rawValue) else {
+                return .standard
+            }
+
+            return mode
+        }
+        set {
+            defaults.set(newValue.rawValue, forKey: Self.preferredBrightnessModeKey)
+        }
+    }
+}
+
 private struct UpdateChecker: Sendable {
     private struct GitHubRelease: Decodable {
         let tagName: String
@@ -287,6 +316,7 @@ private extension String {
 
 @MainActor final class RayXDRMenuBarApp: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let controller = ProcessBrightnessController()
+    private let preferences = AppPreferences()
     private let updateChecker = UpdateChecker()
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let menu = NSMenu()
@@ -331,8 +361,13 @@ private extension String {
 
         menu.delegate = self
         statusItem.menu = menu
+        applyPreferredBrightnessMode()
         refresh()
         checkForUpdatesIfNeeded(force: true)
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        resetBrightnessBeforeExit()
     }
 
     func menuWillOpen(_ menu: NSMenu) {
@@ -341,15 +376,15 @@ private extension String {
     }
 
     @objc private func selectStandard() {
-        run { try controller.off() }
+        run(preferredMode: .standard) { try controller.off() }
     }
 
     @objc private func selectRayXDR() {
-        run { try controller.on(level: 150) }
+        run(preferredMode: .rayxdr150) { try controller.on(level: 150) }
     }
 
     @objc private func reset() {
-        run { try controller.reset() }
+        run(preferredMode: .standard) { try controller.reset() }
     }
 
     @objc private func installUpdate() {
@@ -399,13 +434,33 @@ private extension String {
         NSApp.terminate(nil)
     }
 
-    private func run(_ action: () throws -> String) {
+    private func run(preferredMode: PreferredBrightnessMode? = nil, _ action: () throws -> String) {
         do {
             _ = try action()
+            if let preferredMode {
+                preferences.preferredBrightnessMode = preferredMode
+            }
         } catch {
             present(error: error)
         }
         refresh()
+    }
+
+    private func applyPreferredBrightnessMode() {
+        do {
+            switch preferences.preferredBrightnessMode {
+            case .standard:
+                _ = try controller.off()
+            case .rayxdr150:
+                _ = try controller.on(level: 150)
+            }
+        } catch {
+            present(error: error)
+        }
+    }
+
+    private func resetBrightnessBeforeExit() {
+        _ = try? controller.reset()
     }
 
     private func refresh() {

@@ -183,11 +183,13 @@ public struct ProcessBrightnessController: BrightnessControlling {
     }
 
     private func killStaleHelpers() {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
-        process.arguments = ["-TERM", "-f", "rayxdr-helper|extra-brightness-helper"]
-        try? process.run()
-        process.waitUntilExit()
+        for processName in ["rayxdr-helper", "extra-brightness-helper"] {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+            process.arguments = ["-TERM", "-x", processName]
+            try? process.run()
+            process.waitUntilExit()
+        }
     }
 }
 
