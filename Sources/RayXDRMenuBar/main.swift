@@ -88,12 +88,12 @@ private final class AppPreferences {
     }
 }
 
-@MainActor final class RayXDRMenuBarApp: NSObject, NSApplicationDelegate, NSMenuDelegate {
+@MainActor final class RayXDRMenuBarApp: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUUpdaterDelegate {
     private let controller = ProcessBrightnessController()
     private let preferences = AppPreferences()
-    private let updaterController = SPUStandardUpdaterController(
+    private lazy var updaterController = SPUStandardUpdaterController(
         startingUpdater: true,
-        updaterDelegate: nil,
+        updaterDelegate: self,
         userDriverDelegate: nil
     )
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -105,6 +105,8 @@ private final class AppPreferences {
     private let checkUpdatesItem = NSMenuItem(title: "Check for Updates...", action: #selector(checkForUpdates), keyEquivalent: "")
     private let launchAtLoginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
     private var baseStatusTitle = "XDR"
+    private var availableUpdateVersion: String?
+    private var lastProbeAt: Date?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -145,6 +147,7 @@ private final class AppPreferences {
 
     func menuWillOpen(_ menu: NSMenu) {
         refresh()
+        checkForUpdatesIfNeeded()
     }
 
     @objc private func selectStandard() {
@@ -229,8 +232,45 @@ private final class AppPreferences {
             baseStatusTitle = "XDR!"
         }
 
-        statusItem.button?.title = baseStatusTitle
+        refreshUpdateStatus()
         refreshLaunchAtLogin()
+    }
+
+    private func checkForUpdatesIfNeeded(now: Date = Date()) {
+        let updater = updaterController.updater
+        guard updater.canCheckForUpdates,
+              !updater.sessionInProgress,
+              lastProbeAt.map({ now.timeIntervalSince($0) >= 60 * 60 }) ?? true else {
+            return
+        }
+
+        lastProbeAt = now
+        updater.checkForUpdateInformation()
+        refreshUpdateStatus()
+    }
+
+    private func refreshUpdateStatus() {
+        statusItem.button?.title = availableUpdateVersion == nil ? baseStatusTitle : "\(baseStatusTitle) •"
+        checkUpdatesItem.title = availableUpdateVersion.map { "Update to \($0)..." } ?? "Check for Updates..."
+        checkUpdatesItem.isEnabled = updaterController.updater.canCheckForUpdates
+    }
+
+    func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        availableUpdateVersion = item.displayVersionString
+        refreshUpdateStatus()
+    }
+
+    func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
+        availableUpdateVersion = nil
+        refreshUpdateStatus()
+    }
+
+    func updater(
+        _ updater: SPUUpdater,
+        didFinishUpdateCycleFor updateCheck: SPUUpdateCheck,
+        error: Error?
+    ) {
+        refreshUpdateStatus()
     }
 
     private func refreshLaunchAtLogin() {
