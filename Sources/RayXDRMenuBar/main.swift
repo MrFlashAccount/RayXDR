@@ -106,6 +106,7 @@ private final class AppPreferences {
     private let launchAtLoginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
     private var baseStatusTitle = "XDR"
     private var availableUpdateVersion: String?
+    private var isCheckingForUpdates = false
     private var lastProbeAt: Date?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -163,7 +164,11 @@ private final class AppPreferences {
     }
 
     @objc private func checkForUpdates() {
-        updaterController.checkForUpdates(nil)
+        if availableUpdateVersion != nil {
+            updaterController.checkForUpdates(nil)
+        } else {
+            checkForUpdatesIfNeeded(force: true)
+        }
     }
 
     @objc private func toggleLaunchAtLogin() {
@@ -236,23 +241,30 @@ private final class AppPreferences {
         refreshLaunchAtLogin()
     }
 
-    private func checkForUpdatesIfNeeded(now: Date = Date()) {
+    private func checkForUpdatesIfNeeded(now: Date = Date(), force: Bool = false) {
         let updater = updaterController.updater
         guard updater.canCheckForUpdates,
               !updater.sessionInProgress,
-              lastProbeAt.map({ now.timeIntervalSince($0) >= 60 * 60 }) ?? true else {
+              force || (lastProbeAt.map({ now.timeIntervalSince($0) >= 60 * 60 }) ?? true) else {
             return
         }
 
         lastProbeAt = now
+        isCheckingForUpdates = true
         updater.checkForUpdateInformation()
         refreshUpdateStatus()
     }
 
     private func refreshUpdateStatus() {
         statusItem.button?.title = availableUpdateVersion == nil ? baseStatusTitle : "\(baseStatusTitle) •"
-        checkUpdatesItem.title = availableUpdateVersion.map { "Update to \($0)..." } ?? "Check for Updates..."
-        checkUpdatesItem.isEnabled = updaterController.updater.canCheckForUpdates
+        if let version = availableUpdateVersion {
+            checkUpdatesItem.title = "Update \(version)..."
+        } else if isCheckingForUpdates {
+            checkUpdatesItem.title = "Checking for Updates..."
+        } else {
+            checkUpdatesItem.title = "Check for Updates..."
+        }
+        checkUpdatesItem.isEnabled = updaterController.updater.canCheckForUpdates && !isCheckingForUpdates
     }
 
     func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
@@ -270,6 +282,7 @@ private final class AppPreferences {
         didFinishUpdateCycleFor updateCheck: SPUUpdateCheck,
         error: Error?
     ) {
+        isCheckingForUpdates = false
         refreshUpdateStatus()
     }
 
