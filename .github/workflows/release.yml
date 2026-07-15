@@ -15,10 +15,11 @@ jobs:
   dmg:
     name: Build DMG
     runs-on: macos-15
+    environment: release
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -39,20 +40,74 @@ jobs:
           echo "RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"
           echo "RAYXDR_VERSION=$version" >> "$GITHUB_ENV"
           echo "DMG_PATH=dist/RayXDR-$version.dmg" >> "$GITHUB_ENV"
+          echo "APPCAST_PATH=dist/appcast.xml" >> "$GITHUB_ENV"
 
       - name: Show toolchain
         run: |
           swift --version
           xcodebuild -version
 
+      - name: Download Sparkle signing tools
+        run: |
+          archive="$RUNNER_TEMP/Sparkle-2.9.4.tar.xz"
+          destination="$RUNNER_TEMP/sparkle"
+
+          curl --fail --location --silent --show-error \
+            https://github.com/sparkle-project/Sparkle/releases/download/2.9.4/Sparkle-2.9.4.tar.xz \
+            --output "$archive"
+          echo "ce89daf967db1e1893ed3ebd67575ed82d3902563e3191ca92aaec9164fbdef9  $archive" \
+            | shasum --algorithm 256 --check
+          mkdir -p "$destination"
+          tar -xJf "$archive" -C "$destination"
+          echo "SPARKLE_BIN=$destination/bin" >> "$GITHUB_ENV"
+
       - name: Build DMG
         run: ./script/build-dmg.sh "$RAYXDR_VERSION"
 
+      - name: Generate signed update feed
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_ED25519_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SPARKLE_PRIVATE_KEY" ]; then
+            echo "SPARKLE_ED25519_PRIVATE_KEY is not configured."
+            exit 1
+          fi
+
+          printf '%s' "$SPARKLE_PRIVATE_KEY" \
+            | "$SPARKLE_BIN/generate_appcast" \
+                --ed-key-file - \
+                --download-url-prefix "https://github.com/MrFlashAccount/RayXDR/releases/download/$RELEASE_TAG/" \
+                --link "https://github.com/MrFlashAccount/RayXDR" \
+                --maximum-versions 1 \
+                "$PWD/dist"
+
+          xmllint --noout "$APPCAST_PATH"
+          grep -q 'sparkle:edSignature=' "$APPCAST_PATH"
+          grep -q 'sparkle-signatures:' "$APPCAST_PATH"
+          printf '%s' "$SPARKLE_PRIVATE_KEY" \
+            | "$SPARKLE_BIN/sign_update" \
+                --ed-key-file - \
+                --verify \
+                "$APPCAST_PATH"
+
+      - name: Verify app signature and image
+        run: |
+          codesign --verify --deep --strict --verbose=2 .build/release/RayXDR.app
+          hdiutil verify "$DMG_PATH"
+
+          if spctl --assess --type execute .build/release/RayXDR.app; then
+            echo "Gatekeeper accepted the ad-hoc signed app."
+          else
+            echo "RayXDR is ad-hoc signed and not notarized; a first-launch warning is expected."
+          fi
+
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: RayXDR-${{ env.RAYXDR_VERSION }}.dmg
-          path: ${{ env.DMG_PATH }}
+          name: RayXDR-${{ env.RAYXDR_VERSION }}
+          path: |
+            ${{ env.DMG_PATH }}
+            ${{ env.APPCAST_PATH }}
           if-no-files-found: error
 
       - name: Create release tag
@@ -79,12 +134,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          notes="RayXDR $RELEASE_TAG. The app is ad-hoc signed and not notarized, so macOS may show a warning on first launch."
+
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" "$DMG_PATH" --clobber
+            gh release upload "$RELEASE_TAG" "$DMG_PATH" "$APPCAST_PATH" --clobber
             gh release edit "$RELEASE_TAG" --latest
           else
-            gh release create "$RELEASE_TAG" "$DMG_PATH" \
+            gh release create "$RELEASE_TAG" "$DMG_PATH" "$APPCAST_PATH" \
               --title "RayXDR $RELEASE_TAG" \
-              --notes "RayXDR $RELEASE_TAG" \
+              --notes "$notes" \
               --latest
           fi

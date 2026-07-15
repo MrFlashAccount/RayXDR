@@ -26,6 +26,6 @@ RayXDR remembers your selected mode and reapplies it on launch. Quitting RayXDR 
 
 Enable `Launch at Login` from the menu if you want RayXDR to start automatically.
 
-When a new version is available, the menu bar title gets a dot and the menu shows `Update`.
+Use `Check for Updates...` in the menu to download and install a newer signed release. RayXDR never checks or updates in the background.
 
 Use `Reset` if the display state looks wrong. RayXDR is built for built-in MacBook XDR displays.
