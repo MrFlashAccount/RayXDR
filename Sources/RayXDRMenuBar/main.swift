@@ -148,7 +148,7 @@ private final class AppPreferences {
 
     func menuWillOpen(_ menu: NSMenu) {
         refresh()
-        checkForUpdatesIfNeeded()
+        checkForUpdatesSilentlyIfNeeded()
     }
 
     @objc private func selectStandard() {
@@ -164,11 +164,7 @@ private final class AppPreferences {
     }
 
     @objc private func checkForUpdates() {
-        if availableUpdateVersion != nil {
-            updaterController.checkForUpdates(nil)
-        } else {
-            checkForUpdatesIfNeeded(force: true)
-        }
+        updaterController.checkForUpdates(nil)
     }
 
     @objc private func toggleLaunchAtLogin() {
@@ -241,11 +237,11 @@ private final class AppPreferences {
         refreshLaunchAtLogin()
     }
 
-    private func checkForUpdatesIfNeeded(now: Date = Date(), force: Bool = false) {
+    private func checkForUpdatesSilentlyIfNeeded(now: Date = Date()) {
         let updater = updaterController.updater
         guard updater.canCheckForUpdates,
               !updater.sessionInProgress,
-              force || (lastProbeAt.map({ now.timeIntervalSince($0) >= 60 * 60 }) ?? true) else {
+              lastProbeAt.map({ now.timeIntervalSince($0) >= 60 * 60 }) ?? true else {
             return
         }
 
