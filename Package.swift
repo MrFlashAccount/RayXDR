@@ -12,6 +12,9 @@ let package = Package(
         .executable(name: "rayxdr-helper", targets: ["ExtraBrightnessHelper"]),
         .executable(name: "rayxdr-menubar", targets: ["RayXDRMenuBar"])
     ],
+    dependencies: [
+        .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.4")
+    ],
     targets: [
         .target(name: "ExtraBrightnessCore"),
         .executableTarget(
@@ -24,7 +27,14 @@ let package = Package(
         ),
         .executableTarget(
             name: "RayXDRMenuBar",
-            dependencies: ["ExtraBrightnessCore"]
+            dependencies: [
+                "ExtraBrightnessCore",
+                .product(name: "Sparkle", package: "Sparkle")
+            ]
+        ),
+        .testTarget(
+            name: "RayXDRTests",
+            path: "Tests/RayXDRTests"
         )
     ]
 )

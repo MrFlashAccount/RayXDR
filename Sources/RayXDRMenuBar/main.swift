@@ -1,40 +1,7 @@
 import AppKit
-import CryptoKit
 import ExtraBrightnessCore
 import ServiceManagement
-
-private struct UpdateInfo {
-    let version: String
-    let tagName: String
-    let dmgURL: URL
-    let expectedDigest: String
-}
-
-private enum UpdateError: LocalizedError {
-    case invalidResponse
-    case noCompatibleAsset
-    case missingDigest
-    case checksumMismatch
-    case notInstalledInApplications
-    case helperScriptFailed
-
-    var errorDescription: String? {
-        switch self {
-        case .invalidResponse:
-            "RayXDR could not read the latest GitHub release."
-        case .noCompatibleAsset:
-            "The latest GitHub release does not include a RayXDR DMG."
-        case .missingDigest:
-            "The latest GitHub release does not include a checksum."
-        case .checksumMismatch:
-            "The downloaded RayXDR update did not match the expected checksum."
-        case .notInstalledInApplications:
-            "Move RayXDR to Applications before updating."
-        case .helperScriptFailed:
-            "RayXDR could not start the updater."
-        }
-    }
-}
+import Sparkle
 
 private enum PreferredBrightnessMode: String {
     case standard
@@ -62,199 +29,6 @@ private final class AppPreferences {
         set {
             defaults.set(newValue.rawValue, forKey: Self.preferredBrightnessModeKey)
         }
-    }
-}
-
-private struct UpdateChecker: Sendable {
-    private struct GitHubRelease: Decodable {
-        let tagName: String
-        let assets: [GitHubAsset]
-
-        enum CodingKeys: String, CodingKey {
-            case tagName = "tag_name"
-            case assets
-        }
-    }
-
-    private struct GitHubAsset: Decodable {
-        let name: String
-        let digest: String?
-        let browserDownloadURL: URL
-
-        enum CodingKeys: String, CodingKey {
-            case name
-            case digest
-            case browserDownloadURL = "browser_download_url"
-        }
-    }
-
-    private let releaseURL = URL(string: "https://api.github.com/repos/MrFlashAccount/RayXDR/releases/latest")!
-
-    func latestUpdate(currentVersion: String) async throws -> UpdateInfo? {
-        var request = URLRequest(url: releaseURL)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        request.setValue("RayXDR", forHTTPHeaderField: "User-Agent")
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse, 200..<300 ~= httpResponse.statusCode else {
-            throw UpdateError.invalidResponse
-        }
-
-        let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
-        let latestVersion = release.tagName.removingVersionPrefix
-        guard latestVersion.isNewer(than: currentVersion) else {
-            return nil
-        }
-
-        guard let asset = release.assets.first(where: { asset in
-            asset.name.lowercased().hasSuffix(".dmg") && asset.name.lowercased().contains("rayxdr")
-        }) else {
-            throw UpdateError.noCompatibleAsset
-        }
-
-        guard let digest = asset.digest?.lowercased(), digest.hasPrefix("sha256:") else {
-            throw UpdateError.missingDigest
-        }
-
-        return UpdateInfo(
-            version: latestVersion,
-            tagName: release.tagName,
-            dmgURL: asset.browserDownloadURL,
-            expectedDigest: digest
-        )
-    }
-
-    func install(_ update: UpdateInfo) async throws {
-        let appURL = Bundle.main.bundleURL
-        guard appURL.pathExtension == "app",
-              !appURL.path.contains("/AppTranslocation/"),
-              !appURL.path.hasPrefix("/Volumes/") else {
-            throw UpdateError.notInstalledInApplications
-        }
-
-        let downloadURL = try await download(update.dmgURL, expectedDigest: update.expectedDigest)
-        try startInstaller(downloadURL: downloadURL, targetAppURL: appURL)
-    }
-
-    private func download(_ url: URL, expectedDigest: String) async throws -> URL {
-        var request = URLRequest(url: url)
-        request.setValue("RayXDR", forHTTPHeaderField: "User-Agent")
-
-        let (temporaryURL, response) = try await URLSession.shared.download(for: request)
-        guard let httpResponse = response as? HTTPURLResponse, 200..<300 ~= httpResponse.statusCode else {
-            throw UpdateError.invalidResponse
-        }
-
-        let destinationURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("RayXDR-update-\(UUID().uuidString)")
-            .appendingPathExtension("dmg")
-        try FileManager.default.moveItem(at: temporaryURL, to: destinationURL)
-
-        let data = try Data(contentsOf: destinationURL)
-        let actualDigest = "sha256:" + SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-        guard actualDigest == expectedDigest else {
-            try? FileManager.default.removeItem(at: destinationURL)
-            throw UpdateError.checksumMismatch
-        }
-
-        return destinationURL
-    }
-
-    private func startInstaller(downloadURL: URL, targetAppURL: URL) throws {
-        let scriptURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("rayxdr-update-\(UUID().uuidString)")
-            .appendingPathExtension("sh")
-        let script = """
-        #!/bin/zsh
-        set -euo pipefail
-
-        app_pid="$1"
-        dmg_path="$2"
-        target_app="$3"
-        mount_dir="$(/usr/bin/mktemp -d)"
-
-        cleanup() {
-          /usr/bin/hdiutil detach "$mount_dir" >/dev/null 2>&1 || true
-          /bin/rm -rf "$mount_dir" "$dmg_path"
-        }
-        trap cleanup EXIT
-
-        /usr/bin/hdiutil attach "$dmg_path" -readonly -nobrowse -noautoopen -mountpoint "$mount_dir" >/dev/null
-
-        while /bin/kill -0 "$app_pid" >/dev/null 2>&1; do
-          /bin/sleep 0.2
-        done
-
-        source_app="$mount_dir/RayXDR.app"
-        if [ ! -d "$source_app" ]; then
-          exit 1
-        fi
-        if [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$source_app/Contents/Info.plist")" != "app.rayxdr.RayXDR" ]; then
-          exit 1
-        fi
-        if [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$source_app/Contents/Info.plist")" != "RayXDR" ]; then
-          exit 1
-        fi
-        if [ ! -x "$source_app/Contents/MacOS/RayXDR" ]; then
-          exit 1
-        fi
-        if [ ! -x "$source_app/Contents/MacOS/rayxdr-helper" ]; then
-          exit 1
-        fi
-        /usr/bin/codesign --verify --deep --strict "$source_app" >/dev/null
-
-        /bin/rm -rf "$target_app"
-        /usr/bin/ditto "$source_app" "$target_app"
-        /usr/bin/open "$target_app"
-        /bin/rm -f "$0"
-        """
-
-        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
-        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = [
-            scriptURL.path,
-            "\(ProcessInfo.processInfo.processIdentifier)",
-            downloadURL.path,
-            targetAppURL.path
-        ]
-
-        do {
-            try process.run()
-        } catch {
-            throw UpdateError.helperScriptFailed
-        }
-    }
-}
-
-private extension String {
-    var removingVersionPrefix: String {
-        hasPrefix("v") || hasPrefix("V") ? String(dropFirst()) : self
-    }
-
-    func isNewer(than other: String) -> Bool {
-        let lhs = versionParts
-        let rhs = other.removingVersionPrefix.versionParts
-        let count = max(lhs.count, rhs.count)
-
-        for index in 0..<count {
-            let left = index < lhs.count ? lhs[index] : 0
-            let right = index < rhs.count ? rhs[index] : 0
-
-            if left != right {
-                return left > right
-            }
-        }
-
-        return false
-    }
-
-    private var versionParts: [Int] {
-        removingVersionPrefix
-            .split { !$0.isNumber }
-            .map { Int($0) ?? 0 }
     }
 }
 
@@ -317,20 +91,19 @@ private extension String {
 @MainActor final class RayXDRMenuBarApp: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let controller = ProcessBrightnessController()
     private let preferences = AppPreferences()
-    private let updateChecker = UpdateChecker()
+    private let updaterController = SPUStandardUpdaterController(
+        startingUpdater: true,
+        updaterDelegate: nil,
+        userDriverDelegate: nil
+    )
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let menu = NSMenu()
     private let statusView = StatusMenuView(frame: NSRect(x: 0, y: 0, width: 240, height: 72))
     private let standardItem = NSMenuItem(title: "Standard", action: #selector(selectStandard), keyEquivalent: "")
     private let rayxdrItem = NSMenuItem(title: "RayXDR 150%", action: #selector(selectRayXDR), keyEquivalent: "")
     private let resetItem = NSMenuItem(title: "Reset", action: #selector(reset), keyEquivalent: "")
-    private let updateItem = NSMenuItem(title: "Update...", action: #selector(installUpdate), keyEquivalent: "")
     private let checkUpdatesItem = NSMenuItem(title: "Check for Updates...", action: #selector(checkForUpdates), keyEquivalent: "")
     private let launchAtLoginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
-    private var updateInfo: UpdateInfo?
-    private var isCheckingForUpdates = false
-    private var isInstallingUpdate = false
-    private var lastUpdateCheck: Date?
     private var baseStatusTitle = "XDR"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -347,7 +120,6 @@ private extension String {
         standardItem.target = self
         rayxdrItem.target = self
         resetItem.target = self
-        updateItem.target = self
         checkUpdatesItem.target = self
         launchAtLoginItem.target = self
         menu.addItem(standardItem)
@@ -355,7 +127,6 @@ private extension String {
         menu.addItem(.separator())
         menu.addItem(resetItem)
         menu.addItem(.separator())
-        menu.addItem(updateItem)
         menu.addItem(checkUpdatesItem)
         menu.addItem(.separator())
         menu.addItem(launchAtLoginItem)
@@ -366,7 +137,6 @@ private extension String {
         statusItem.menu = menu
         applyPreferredBrightnessMode()
         refresh()
-        checkForUpdatesIfNeeded(force: true)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -375,7 +145,6 @@ private extension String {
 
     func menuWillOpen(_ menu: NSMenu) {
         refresh()
-        checkForUpdatesIfNeeded()
     }
 
     @objc private func selectStandard() {
@@ -390,32 +159,8 @@ private extension String {
         run(preferredMode: .standard) { try controller.reset() }
     }
 
-    @objc private func installUpdate() {
-        guard let updateInfo, !isInstallingUpdate else {
-            return
-        }
-
-        isInstallingUpdate = true
-        refreshUpdateItem()
-
-        Task {
-            do {
-                try await updateChecker.install(updateInfo)
-                await MainActor.run {
-                    NSApp.terminate(nil)
-                }
-            } catch {
-                await MainActor.run {
-                    isInstallingUpdate = false
-                    refreshUpdateItem()
-                    present(error: error)
-                }
-            }
-        }
-    }
-
     @objc private func checkForUpdates() {
-        checkForUpdatesIfNeeded(force: true, presentsNoUpdateAlert: true)
+        updaterController.checkForUpdates(nil)
     }
 
     @objc private func toggleLaunchAtLogin() {
@@ -484,9 +229,8 @@ private extension String {
             baseStatusTitle = "XDR!"
         }
 
-        refreshStatusTitle()
+        statusItem.button?.title = baseStatusTitle
         refreshLaunchAtLogin()
-        refreshUpdateItem()
     }
 
     private func refreshLaunchAtLogin() {
@@ -512,88 +256,6 @@ private extension String {
         }
 
         NSWorkspace.shared.open(url)
-    }
-
-    private func checkForUpdatesIfNeeded(force: Bool = false, presentsNoUpdateAlert: Bool = false) {
-        guard !isCheckingForUpdates else {
-            return
-        }
-
-        if !force, let lastUpdateCheck, Date().timeIntervalSince(lastUpdateCheck) < 60 * 60 {
-            return
-        }
-
-        isCheckingForUpdates = true
-        refreshUpdateItem()
-
-        Task {
-            do {
-                let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
-                let latestUpdate = try await updateChecker.latestUpdate(currentVersion: currentVersion)
-
-                await MainActor.run {
-                    updateInfo = latestUpdate
-                    isCheckingForUpdates = false
-                    lastUpdateCheck = Date()
-                    refreshStatusTitle()
-                    refreshUpdateItem()
-
-                    if presentsNoUpdateAlert, latestUpdate == nil {
-                        presentUpToDate()
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    isCheckingForUpdates = false
-                    lastUpdateCheck = Date()
-                    refreshUpdateItem()
-
-                    if presentsNoUpdateAlert {
-                        present(error: error)
-                    }
-                }
-            }
-        }
-    }
-
-    private func refreshStatusTitle() {
-        statusItem.button?.title = updateInfo == nil ? baseStatusTitle : "\(baseStatusTitle) •"
-    }
-
-    private func refreshUpdateItem() {
-        if isInstallingUpdate {
-            updateItem.title = "Installing Update..."
-            updateItem.isEnabled = false
-            updateItem.isHidden = false
-            checkUpdatesItem.title = "Check for Updates..."
-            checkUpdatesItem.isEnabled = false
-        } else if isCheckingForUpdates {
-            updateItem.title = "Checking for Updates..."
-            updateItem.isEnabled = false
-            updateItem.isHidden = updateInfo == nil
-            checkUpdatesItem.title = "Checking for Updates..."
-            checkUpdatesItem.isEnabled = false
-        } else if let updateInfo {
-            updateItem.title = "Update to \(updateInfo.tagName)..."
-            updateItem.isEnabled = true
-            updateItem.isHidden = false
-            checkUpdatesItem.title = "Check for Updates..."
-            checkUpdatesItem.isEnabled = true
-        } else {
-            updateItem.title = "Update..."
-            updateItem.isEnabled = false
-            updateItem.isHidden = true
-            checkUpdatesItem.title = "Check for Updates..."
-            checkUpdatesItem.isEnabled = true
-        }
-    }
-
-    private func presentUpToDate() {
-        let alert = NSAlert()
-        alert.messageText = "RayXDR is up to date"
-        alert.informativeText = "You are running the latest available version."
-        alert.alertStyle = .informational
-        alert.runModal()
     }
 
     private func present(error: Error) {
