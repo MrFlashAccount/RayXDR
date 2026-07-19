@@ -8,7 +8,8 @@ final class ExtraBrightnessHelper {
     private var overlayController: EDROverlayWindowController?
     private var gammaController: GammaController?
     private var pollTimer: Timer?
-    private var applied = false
+    private var lastAppliedFactor: Float?
+    private var notificationObservers: [NSObjectProtocol] = []
 
     init(targetLevel: Int) {
         self.targetLevel = targetLevel
@@ -35,12 +36,16 @@ final class ExtraBrightnessHelper {
         gammaController = gamma
         overlayController = EDROverlayWindowController(screen: screen)
         overlayController?.show()
+        installNotificationObservers()
 
-        pollTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                self?.tick()
+                self?.tick(force: false)
             }
         }
+        pollTimer?.tolerance = 0.2
+
+        tick(force: true)
 
         print("RayXDR helper running: \(targetLevel)%")
     }
@@ -48,6 +53,7 @@ final class ExtraBrightnessHelper {
     func stop() {
         pollTimer?.invalidate()
         pollTimer = nil
+        removeNotificationObservers()
         gammaController?.restore()
         gammaController = nil
         overlayController?.close()
@@ -55,7 +61,7 @@ final class ExtraBrightnessHelper {
         NSApp.terminate(nil)
     }
 
-    private func tick() {
+    private func tick(force: Bool) {
         guard let screen = BuiltInDisplay.screen() else {
             stop()
             return
@@ -70,8 +76,50 @@ final class ExtraBrightnessHelper {
 
         let requested = Float(targetLevel) / 100.0
         let factor = min(max(requested, 1.0), Float(maxEDR))
+        if !force,
+           let lastAppliedFactor,
+           abs(lastAppliedFactor - factor) <= 0.001 {
+            return
+        }
+
         gammaController?.apply(factor: factor)
-        applied = true
+        lastAppliedFactor = factor
+    }
+
+    private func installNotificationObservers() {
+        let screenObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.tick(force: true)
+                self?.overlayController?.window?.contentView?.needsDisplay = true
+            }
+        }
+
+        let wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.tick(force: true)
+                self?.overlayController?.window?.contentView?.needsDisplay = true
+            }
+        }
+
+        notificationObservers = [screenObserver, wakeObserver]
+    }
+
+    private func removeNotificationObservers() {
+        guard notificationObservers.count == 2 else {
+            return
+        }
+
+        NotificationCenter.default.removeObserver(notificationObservers[0])
+        NSWorkspace.shared.notificationCenter.removeObserver(notificationObservers[1])
+        notificationObservers.removeAll()
     }
 }
 
