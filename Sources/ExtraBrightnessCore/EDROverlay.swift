@@ -18,7 +18,8 @@ public final class EDROverlayView: MTKView, MTKViewDelegate {
         colorPixelFormat = .rgba16Float
         colorspace = CGColorSpace(name: CGColorSpace.extendedLinearSRGB)
         clearColor = MTLClearColorMake(16.0, 16.0, 16.0, 1.0)
-        preferredFramesPerSecond = 5
+        isPaused = true
+        enableSetNeedsDisplay = true
         framebufferOnly = false
 
         if let layer = self.layer as? CAMetalLayer {
@@ -77,9 +78,13 @@ public final class EDROverlayWindowController: NSWindowController, NSWindowDeleg
     public func show() {
         window?.orderFrontRegardless()
         reposition()
+        window?.contentView?.needsDisplay = true
     }
 
     public func reposition() {
-        window?.setFrameOrigin(CGPoint(x: screen.frame.origin.x, y: screen.frame.maxY - 1))
+        let origin = CGPoint(x: screen.frame.origin.x, y: screen.frame.maxY - 1)
+        if window?.frame.origin != origin {
+            window?.setFrameOrigin(origin)
+        }
     }
 }
